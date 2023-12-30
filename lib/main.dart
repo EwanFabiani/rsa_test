@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rsa_test/backend/storage.dart';
 import 'backend/account_manager.dart';
+import 'backend/message.dart';
 import 'backend/rsa_keygen.dart';
 import 'backend/chats_manager.dart';
 import 'backend/user.dart';
@@ -172,43 +173,44 @@ class ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<User>>(
-      future: getMessages(username, receiver),
-      builder: (BuildContext context, AsyncSnapshot<List<User>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator(); // or your own loading widget
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        } else {
-          final List<User> rooms = snapshot.data != null ? snapshot.data! : [];
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(widget.user.username),
-              backgroundColor: Theme
-                  .of(context)
-                  .colorScheme
-                  .secondary,
-            ),
-            body: Column(
-              children: <Widget>[
-                Flexible(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    reverse: true,
-                    itemCount: _messages.length,
-                    itemBuilder: (_, int index) =>
-                        _buildMessage(_messages[index]),
+    return FutureBuilder<List<Message>>(
+        future: getDecryptedMessages(widget.user),
+        builder: (BuildContext context, AsyncSnapshot<List<Message>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CircularProgressIndicator(); // or your own loading widget
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            final List<Message> messages = snapshot.data != null ? snapshot.data! : [];
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(widget.user.username),
+                backgroundColor: Theme
+                    .of(context)
+                    .colorScheme
+                    .secondary,
+              ),
+              body: Column(
+                children: <Widget>[
+                  Flexible(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(8.0),
+                      reverse: true,
+                      itemCount: messages.length,
+                      itemBuilder: (_, int index) =>
+                          _buildMessage(messages[index].message),
+                    ),
                   ),
-                ),
-                const Divider(height: 1.0),
-                _buildTextComposer(),
-              ],
-            ),
-          );
+                  const Divider(height: 1.0),
+                  _buildTextComposer(),
+                ],
+              ),
+            );
+          }
         }
-      }
     );
   }
+
 
   Widget _buildMessage(String message) {
     return Padding(

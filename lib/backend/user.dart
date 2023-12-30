@@ -14,6 +14,10 @@ class User {
         modulus = json['modulus'],
         exponent = json['exponent'];
 
+  User.fromKey(this.username, RSAPublicKey publicKey)
+      : modulus = base64Encode(utf8.encode(publicKey.modulus.toString())),
+        exponent = base64Encode(utf8.encode(publicKey.exponent.toString()));
+
   RSAPublicKey getPublicKey() {
     String modulus = utf8.decode(base64Decode(this.modulus));
     String exponent = utf8.decode(base64Decode(this.exponent));

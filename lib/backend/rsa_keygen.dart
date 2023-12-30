@@ -1,6 +1,7 @@
 import 'package:pointycastle/src/platform_check/platform_check.dart';
 import "package:pointycastle/export.dart";
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:rsa_test/backend/storage.dart';
 
 AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateRSAkeyPair() {
 
@@ -47,7 +48,7 @@ RSAPublicKey generateAndStoreKeys() {
     final publicKey = pair.publicKey;
     final privateKey = pair.privateKey;
 
-    //storePrivateKey(privateKey);
+    storePrivateKey(privateKey);
     //UNCOMMENT FOR IT TO WORK!!!
 
     return publicKey;

@@ -28,8 +28,12 @@ List<String> usernameFromUsers(List<User> users) {
   return users.map((user) => user.username).toList();
 }
 
-Future<List<Message>> getDecryptedMessages (User current, User target) async {
+Future<List<Message>> getDecryptedMessages (User target) async {
+  print("Getting decrypted messages");
+  User current = await getCurrentUser();
+  print("Current user: ${current.username}");
   List<EncryptedMessage> encryptedMessages = await _getMessages(current, target);
+  print("Encrypted messages: $encryptedMessages");
   List<Message> decryptedMessages = [];
   final RSAPrivateKey privateKey = await getPrivateKey();
 
@@ -53,6 +57,7 @@ Future<List<EncryptedMessage>> _getMessages(User current, User target) async {
       "receiver": current.username
     }),
   );
+  print(response.body);
   String json = response.body;
   List<EncryptedMessage> messages = _messagesFromJsonList(jsonDecode(json));
   return messages;
