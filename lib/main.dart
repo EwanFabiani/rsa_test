@@ -95,78 +95,106 @@ class ChatRoomsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<User>>(
-      future: getCurrentChats(),
-      builder: (BuildContext context, AsyncSnapshot<List<User>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator(); // or your own loading widget
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
+    return FutureBuilder(
+      future: getCurrentUser(),
+      builder: (BuildContext context, AsyncSnapshot<User> userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        } else if (userSnapshot.hasError) {
+          return Text('Error: ${userSnapshot.error}');
         } else {
-          final List<User> rooms = snapshot.data != null ? snapshot.data! : [];
-          return Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: const Text('Chat Rooms'),
-              backgroundColor: Theme.of(context).colorScheme.onSecondary,
-            ),
-            body: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ListView.builder(
-                itemCount: rooms.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    elevation: 1.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        child: Text(
-                          rooms[index].username[0],
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      title: Text(
-                        rooms[index].username,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ChatPage(user: rooms[index])),
+          return FutureBuilder<List<User>>(
+            future: getCurrentChats(),
+            builder: (BuildContext context,
+                AsyncSnapshot<List<User>> chatsSnapshot) {
+              if (chatsSnapshot.connectionState == ConnectionState.waiting) {
+                return const CircularProgressIndicator(); // or your own loading widget
+              } else if (chatsSnapshot.hasError) {
+                return Text('Error: ${chatsSnapshot.error}');
+              } else {
+                final List<User> rooms = chatsSnapshot.data != null
+                    ? chatsSnapshot.data!
+                    : [];
+                return Scaffold(
+                  appBar: AppBar(
+                    automaticallyImplyLeading: false,
+                    title: const Text('Chat Rooms'),
+                    backgroundColor: Theme
+                        .of(context)
+                        .colorScheme
+                        .onSecondary,
+                  ),
+                  body: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListView.builder(
+                      itemCount: rooms.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          elevation: 1.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .secondary,
+                              child: Text(
+                                rooms[index].username[0],
+                                style: const TextStyle(color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            title: Text(
+                              rooms[index].username == userSnapshot.data!.username
+                                  ? "${rooms[index].username} (You)"
+                                  : rooms[index].username,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) =>
+                                    ChatPage(user: rooms[index])),
+                              );
+                            },
+                          ),
                         );
                       },
                     ),
-                  );
-                },
-              ),
-            ),
-            floatingActionButton: SizedBox(
-              width: 60.0,  // Set the width of the button
-              height: 60.0,  // Set the height of the button
-              child: FloatingActionButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => QRScannerWidget(),
+                  ),
+                  floatingActionButton: SizedBox(
+                    width: 60.0, // Set the width of the button
+                    height: 60.0, // Set the height of the button
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => QRScannerWidget(),
+                          ),
+                        );
+                      },
+                      backgroundColor: Theme
+                          .of(context)
+                          .colorScheme
+                          .secondary,
+                      mini: false,
+                      child: const Icon(
+                        Icons.qr_code,
+                        size: 35.0, // Increase the icon size here
+                      ),
                     ),
-                  );
-                },
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                mini: false,
-                child: const Icon(
-                  Icons.qr_code,
-                  size: 35.0,  // Increase the icon size here
-                ),
-              ),
-            ),
+                  ),
 
 
+                );
+              }
+            },
           );
         }
-      },
+      }
     );
   }
 }

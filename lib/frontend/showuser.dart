@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rsa_test/backend/storage.dart';
 
 import '../backend/user.dart';
 
@@ -55,7 +56,8 @@ class UserProfile extends StatelessWidget {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Add your functionality for adding to contacts here
+                  addContact(user);
+                  Navigator.pop(context);
                 },
                 child: const Text('Add to Contacts'),
               ),

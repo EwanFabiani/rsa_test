@@ -14,13 +14,8 @@ const String endpoint = "http://45.84.196.211:8080";
 //THIS IS INCOMPATIBLE WITH CURRENT STANDARDS
 //BUT IT IS TEMPORARY UNTIL WE HAVE A DATABASE
 Future<List<User>> getCurrentChats() async {
-  final response = await http.get(Uri.parse("$endpoint/user/get_all"));
-  String json = response.body;
-  List<User> users = _usersFromJsonList(jsonDecode(json));
-  for (User user in users) {
-    //await addContact(user);
-  }
-  return users;
+  List<User> contacts = await getContacts();
+  return contacts;
 }
 
 //THIS IS ALSO INCOMPATIBLE WITH CURRENT STANDARDS
