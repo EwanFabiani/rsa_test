@@ -1,5 +1,6 @@
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:http/http.dart' as http;
+import 'package:rsa_test/backend/secure_storage.dart';
 import 'package:rsa_test/backend/storage.dart';
 import 'package:rsa_test/backend/user.dart';
 import 'dart:convert';
@@ -9,11 +10,15 @@ const String endpoint = "http://45.84.196.211:8080";
 
 void createAccount(String username) {
 
+  createTables();
+
   final RSAPublicKey publicKey = generateAndStoreKeys();
 
   User current = User.fromKey(username, publicKey);
 
   storeUser(current);
+
+  addContact(current);
 
   final response = _sendPublicKeyToServer(publicKey, username);
 }

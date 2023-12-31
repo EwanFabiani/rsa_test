@@ -1,5 +1,11 @@
-import 'package:rsa_test/backend/encrypted_message.dart';
+import 'dart:convert';
 
+import 'package:pointycastle/asymmetric/api.dart';
+import 'package:rsa_test/backend/encrypted_message.dart';
+import 'package:rsa_test/backend/rsa_encrypt.dart';
+import 'package:rsa_test/backend/rsa_sign.dart';
+
+//ALWAYS IN PLAIN TEXT
 class Message {
   final String sender;
   final String receiver;
@@ -15,5 +21,11 @@ class Message {
         receiver = encryptedMessage.receiver,
         message = decryptedMessage,
         timestamp = encryptedMessage.timestamp;
+
+  EncryptedMessage encryptAndSign(RSAPublicKey receiverKey, RSAPrivateKey senderKey) {
+    final encrypted = base64Encode(rsaEncrypt(receiverKey, utf8.encode(message)));
+    final signature = base64Encode(rsaSign(senderKey, utf8.encode(encrypted)));
+    return EncryptedMessage(sender, receiver, encrypted, signature, timestamp);
+  }
 
 }

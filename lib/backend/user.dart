@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:pointycastle/asymmetric/api.dart';
 
+//USERNAME ALWASY PLAIN TEXT
+//MODULUS AND EXPONENT ALWAYS BASE64 ENCODED
 class User {
   final String username;
   final String modulus;

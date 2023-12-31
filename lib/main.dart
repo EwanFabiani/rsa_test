@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:rsa_test/backend/storage.dart';
+import 'package:rsa_test/backend/secure_storage.dart';
+import 'package:rsa_test/frontend/qr.dart';
 import 'backend/account_manager.dart';
 import 'backend/message.dart';
 import 'backend/rsa_keygen.dart';
 import 'backend/chats_manager.dart';
 import 'backend/user.dart';
+import 'frontend/qr.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,8 +86,6 @@ class StartScreenState extends State<StartScreen> {
       ),
     );
   }
-
-
 }
 
 
@@ -105,6 +106,7 @@ class ChatRoomsPage extends StatelessWidget {
           final List<User> rooms = snapshot.data != null ? snapshot.data! : [];
           return Scaffold(
             appBar: AppBar(
+              automaticallyImplyLeading: false,
               title: const Text('Chat Rooms'),
               backgroundColor: Theme.of(context).colorScheme.onSecondary,
             ),
@@ -141,12 +143,35 @@ class ChatRoomsPage extends StatelessWidget {
                 },
               ),
             ),
+            floatingActionButton: SizedBox(
+              width: 60.0,  // Set the width of the button
+              height: 60.0,  // Set the height of the button
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => QRScannerWidget(),
+                    ),
+                  );
+                },
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                mini: false,
+                child: const Icon(
+                  Icons.qr_code,
+                  size: 35.0,  // Increase the icon size here
+                ),
+              ),
+            ),
+
+
           );
         }
       },
     );
   }
 }
+
+
 
 class ChatPage extends StatefulWidget {
   const ChatPage({Key? key, required this.user}) : super(key: key);
@@ -174,7 +199,7 @@ class ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Message>>(
-        future: getDecryptedMessages(widget.user),
+        future: getMessages(widget.user),
         builder: (BuildContext context, AsyncSnapshot<List<Message>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const CircularProgressIndicator(); // or your own loading widget
@@ -198,7 +223,7 @@ class ChatPageState extends State<ChatPage> {
                       reverse: true,
                       itemCount: messages.length,
                       itemBuilder: (_, int index) =>
-                          _buildMessage(messages[index].message),
+                          _buildMessage(messages[index]),
                     ),
                   ),
                   const Divider(height: 1.0),
@@ -212,7 +237,7 @@ class ChatPageState extends State<ChatPage> {
   }
 
 
-  Widget _buildMessage(String message) {
+  Widget _buildMessage(Message message) {
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Row(
@@ -220,7 +245,7 @@ class ChatPageState extends State<ChatPage> {
           CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.secondary,
             child: Text(
-              message[0],
+              message.sender[0],
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -231,7 +256,7 @@ class ChatPageState extends State<ChatPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 child: Text(
-                  message,
+                  message.message,
                   style: const TextStyle(color: Colors.white),
                 ),
               ),

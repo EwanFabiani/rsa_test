@@ -1,7 +1,7 @@
 import 'package:pointycastle/src/platform_check/platform_check.dart';
 import "package:pointycastle/export.dart";
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:rsa_test/backend/storage.dart';
+import 'package:rsa_test/backend/secure_storage.dart';
 
 AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateRSAkeyPair() {
 

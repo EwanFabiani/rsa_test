@@ -1,70 +1,73 @@
-import 'dart:convert';
-
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/asymmetric/api.dart';
+import 'package:rsa_test/backend/encrypted_message.dart';
 import 'package:rsa_test/backend/user.dart';
+import 'package:sqflite/sqflite.dart';
 
-Future<void> storePrivateKey(RSAPrivateKey privateKey) async {
+var db = openDatabase('rsa.db');
 
-  const storage = FlutterSecureStorage();
-
-  final privateModulus = base64Encode(utf8.encode(privateKey.modulus.toString()));
-  final privateExponent = base64Encode(utf8.encode(privateKey.exponent.toString()));
-  final privateP = base64Encode(utf8.encode(privateKey.p.toString()));
-  final privateQ = base64Encode(utf8.encode(privateKey.q.toString()));
-
-  await storage.write(key: "private_modulus", value: privateModulus);
-  await storage.write(key: "private_exponent", value: privateExponent);
-  await storage.write(key: "private_p", value: privateP);
-  await storage.write(key: "private_q", value: privateQ);
-
+Future<void> createTables() async {
+  await db.then((value) => value.execute(
+      'CREATE TABLE IF NOT EXISTS contacts (username VARCHAR(32) PRIMARY KEY, public_modulus TEXT, public_exponent TEXT)'));
+  await db.then((value) => value.execute(
+      'CREATE TABLE IF NOT EXISTS messages (sender TEXT, receiver TEXT, message TEXT, signature TEXT, timestamp INTEGER)'));
 }
 
-Future<RSAPrivateKey> getPrivateKey() async {
-
-  const storage = FlutterSecureStorage();
-
-  String? privateModulus = await storage.read(key: "private_modulus");
-  String? privateExponent = await storage.read(key: "private_exponent");
-  String? privateP = await storage.read(key: "private_p");
-  String? privateQ = await storage.read(key: "private_q");
-
-  privateModulus = utf8.decode(base64Decode(privateModulus!));
-  privateExponent = utf8.decode(base64Decode(privateExponent!));
-  privateP = utf8.decode(base64Decode(privateP!));
-  privateQ = utf8.decode(base64Decode(privateQ!));
-
-  return RSAPrivateKey(
-    BigInt.parse(privateModulus!),
-    BigInt.parse(privateExponent!),
-    BigInt.parse(privateP!),
-    BigInt.parse(privateQ!),
-  );
+Future<void> addContact(User user) async {
+  await db.then((value) => value.transaction((txn) async {
+        await txn.rawInsert(
+            'INSERT INTO contacts(username, public_modulus, public_exponent) VALUES(?, ?, ?)',
+            [user.username, user.modulus.toString(), user.exponent.toString()]);
+      }));
 }
 
-Future<void> storeUser(User user) async {
-  const storage = FlutterSecureStorage();
-
-  final username = user.username;
-  final publicModulus = base64Encode(utf8.encode(user.modulus.toString()));
-  final publicExponent = base64Encode(utf8.encode(user.exponent.toString()));
-
-  await storage.write(key: "username", value: username);
-  await storage.write(key: "public_modulus", value: publicModulus);
-  await storage.write(key: "public_exponent", value: publicExponent);
+Future<List<User>> getContacts() async {
+  List<Map<String, dynamic>> contacts = await db.then((value) =>
+      value.rawQuery('SELECT * FROM contacts ORDER BY username ASC'));
+  return contacts
+      .map((contact) => User(contact['username'], contact['public_modulus'],
+          contact['public_exponent']))
+      .toList();
 }
 
-Future<User> getCurrentUser() async {
-  const storage = FlutterSecureStorage();
+Future<User> getUser(String username) async {
+  List<Map<String, dynamic>> contacts = await db.then((value) => value.rawQuery(
+      'SELECT * FROM contacts WHERE username = ? LIMIT 1', [username]));
+  if (contacts.isEmpty) {
+    throw Exception("User not found");
+  }
+  return User(contacts[0]['username'], contacts[0]['public_modulus'],
+      contacts[0]['public_exponent']);
+}
 
-  String? username = await storage.read(key: "username");
-  String? publicModulus = await storage.read(key: "public_modulus");
-  String? publicExponent = await storage.read(key: "public_exponent");
+//Only add messages encrypted with the users public key
+//Otherwise the messages cannot be decrypted
+//Sign the messages with the senders private key
+Future<void> localStoreMessage(EncryptedMessage message) async {
+  await db.then((value) => value.transaction((txn) async {
+        await txn.rawInsert(
+            'INSERT INTO messages(sender, receiver, message, signature, timestamp) VALUES(?, ?, ?, ?, ?)',
+            [
+              message.sender,
+              message.receiver,
+              message.encryptedMessage,
+              message.signature,
+              message.timestamp.millisecondsSinceEpoch
+            ]);
+      }));
+}
 
-  publicModulus = utf8.decode(base64Decode(publicModulus!));
-  publicExponent = utf8.decode(base64Decode(publicExponent!));
-
-  return User(username!, publicModulus!, publicExponent!);
-
-
+//get 10 latest messages between current user and target
+Future<List<EncryptedMessage>> localGetMessages(
+    User current, User target) async {
+  List<Map<String, dynamic>> messages = await db.then((value) => value.rawQuery(
+      'SELECT * FROM messages WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?) ORDER BY timestamp DESC LIMIT 10',
+      [current.username, target.username, target.username, current.username]));
+  return messages
+      .map((message) => EncryptedMessage(
+          message['sender'],
+          message['receiver'],
+          message['message'],
+          message['signature'],
+          DateTime.fromMillisecondsSinceEpoch(message['timestamp'])))
+      .toList();
 }
