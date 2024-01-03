@@ -1,19 +1,17 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:rsa_test/backend/qr_manager.dart';
+import 'package:rsa_test/backend/add_contacts_manager.dart';
 import 'package:rsa_test/frontend/showuser.dart';
 
 import '../backend/secure_storage.dart';
 
-class QRCodeWidget extends StatelessWidget {
+class QRGenerator extends StatelessWidget {
 
-  const QRCodeWidget();
+  const QRGenerator();
 
   @override
   Widget build(BuildContext context) {
@@ -54,82 +52,14 @@ class QRCodeWidget extends StatelessWidget {
   }
 }
 
-
-class QRScannerWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Add a new contact'),
-      ),
-      body: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const QRCodeWidget(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.qr_code),
-                  label: const Text('Show my QR Code'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: Colors.blue,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20.0), bottom: Radius.circular(10.0)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10.0), // Add some space between the buttons
-            Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  icon: const Icon(Icons.camera),
-                  label: const Text('Scan a QR code'),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const QRViewExample(),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: Colors.blue,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(10.0), bottom: Radius.circular(20.0)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-class QRViewExample extends StatefulWidget {
-  const QRViewExample({Key? key}) : super(key: key);
+class QRScanner extends StatefulWidget {
+  const QRScanner({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _QRViewExampleState();
+  State<StatefulWidget> createState() => _QRScannerState();
 }
 
-class _QRViewExampleState extends State<QRViewExample> {
+class _QRScannerState extends State<QRScanner> {
   Barcode? result;
   QRViewController? controller;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -232,13 +162,13 @@ class _QRViewExampleState extends State<QRViewExample> {
         result = scanData;
       });
       controller.pauseCamera();
-      if(!isValidQrData(scanData.code!)) {
+      if(!isValidUserJsonData(scanData.code!)) {
         showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
-              title: const Text("Scan result"),
-              content: Text(scanData.code!),
+              title: const Text("Invalid QR Code"),
+              content: const Text("This QR Code is not a valid user QR Code."),
               actions: [
                 TextButton(
                     onPressed: () {
@@ -251,13 +181,8 @@ class _QRViewExampleState extends State<QRViewExample> {
           }
         );
       }else {
-        getUserFromQrData(scanData.code!).then((user) {
-          Map<String, dynamic> json = jsonDecode(scanData.code!);
-          var publicKeyFingerprint = json["public_fingerprint"];
-          Uint8List publicFingerprintBytes = base64Decode(publicKeyFingerprint);
-          //make it into hex
-          publicKeyFingerprint = "0x${publicFingerprintBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join()}";
-
+        getUserFromData(scanData.code!).then((user) {
+          String publicKeyFingerprint = getHexFingerprintFromData(scanData.code!);
           Navigator.pop(context, [user, publicKeyFingerprint]);
           Navigator.push(
             context,

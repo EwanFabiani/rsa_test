@@ -10,7 +10,7 @@ import 'package:rsa_test/backend/user.dart';
 
 const String endpoint = "http://45.84.196.211:8080";
 
-bool isValidQrData(String data) {
+bool isValidUserJsonData(String data) {
   try {
     //check if data has the correct format
     //It has to have 3 keys: username, modulus and exponent
@@ -38,7 +38,7 @@ bool isValidQrData(String data) {
   }
 }
 
-Future<User> getUserFromQrData(String data) async {
+Future<User> getUserFromData(String data) async {
   Map<String, dynamic> json = jsonDecode(data);
   final username = json["username"];
   final publicFingerprint = json["public_fingerprint"];
@@ -59,6 +59,16 @@ bool verifyUser(User user, String publicFingerprint, String exponent) {
   Uint8List publicFingerprintBytes = base64Decode(publicFingerprint);
   Uint8List userFingerprintBytes = _sha256Digest(utf8.encode(user.modulus));
   return base64Encode(publicFingerprintBytes) == base64Encode(userFingerprintBytes);
+}
+
+String getHexFingerprintFromData(String data) {
+  Map<String, dynamic> json = jsonDecode(data);
+  String publicKeyFingerprint = json["public_fingerprint"];
+  Uint8List publicFingerprintBytes = base64Decode(publicKeyFingerprint);
+  //turning it into hex
+  publicKeyFingerprint = "0x${publicFingerprintBytes.map((e) => e.toRadixString(16).padLeft(2, '0')).join()}";
+  return publicKeyFingerprint;
+
 }
 
 Future<User> _requestUserFromUsername(String username) async {
@@ -100,4 +110,14 @@ Future<QrImageView> createQrCode() async {
   String data = jsonEncode(json);
 
   return QrImageView(data: data);
+}
+
+String getStringFromAscii(Uint8List bytes) {
+  String result = "";
+  //the first character is a NUL character, and it breaks the string
+  for (int i = 1; i < bytes.length; i++) {
+    result = result + ascii.decode([bytes[i]]);
+    print(ascii.decode([bytes[i]]));
+  }
+  return result;
 }

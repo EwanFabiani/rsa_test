@@ -87,7 +87,7 @@ void _verifyAndStoreMessages(List<EncryptedMessage> messages) async {
   for (EncryptedMessage encryptedMessage in messages) {
     User sender = await getUser(encryptedMessage.sender);
     if (encryptedMessage.verifySignature(sender.getPublicKey())) {
-      _storeMessage(encryptedMessage);
+      _storeMessage(encryptedMessage, false);
     }else {
       //TO IMPLEMENT IF VERIFICATION FAILS
       print("Verification failed2");
@@ -108,11 +108,6 @@ List<EncryptedMessage> _messagesFromJsonList(List<dynamic> jsonList) {
 
 Future<void> sendMessage(User current, User target, String message) async {
 
-  //Prevent seeing your own message twice in your own chat
-  if (current.username == target.username) {
-    return;
-  }
-
   RSAPrivateKey privateKey = await getPrivateKey();
 
   Message messageObject = Message(current.username, target.username, message, DateTime.now());
@@ -123,9 +118,16 @@ Future<void> sendMessage(User current, User target, String message) async {
   //This is encrypted for the sender, storing in local database
   EncryptedMessage storedMessage = messageObject.encryptAndSign(current.getPublicKey(), privateKey);
 
-  _transferMessage(sendingMessage);
+  bool seen = false;
 
-  _storeMessage(storedMessage);
+  if (current.username == target.username) {
+    print('Cannot send message to self');
+    seen = true;
+  }else {
+    _transferMessage(sendingMessage);
+  }
+
+  _storeMessage(storedMessage, seen);
 }
 
 Future<void> _transferMessage(EncryptedMessage message) async {
@@ -144,8 +146,8 @@ Future<void> _transferMessage(EncryptedMessage message) async {
   //HANDLE RESPONSE!!!
 }
 
-Future<void> _storeMessage(EncryptedMessage message) async {
-  await localStoreMessage(message);
+Future<void> _storeMessage(EncryptedMessage message, bool seen) async {
+  await localStoreMessage(message, seen);
 }
 
 Future<List<EncryptedMessage>> getServerUnreadMessages() async {

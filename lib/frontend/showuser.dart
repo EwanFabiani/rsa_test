@@ -3,6 +3,7 @@ import 'package:rsa_test/backend/storage.dart';
 
 import '../backend/user.dart';
 import '../main.dart';
+import 'chat_rooms.dart';
 
 class UserProfile extends StatelessWidget {
   final String profilePicUrl;

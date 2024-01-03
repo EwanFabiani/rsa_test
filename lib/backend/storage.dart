@@ -43,14 +43,7 @@ Future<User> getUser(String username) async {
 //Only add messages encrypted with the users public key
 //Otherwise the messages cannot be decrypted
 //Sign the messages with the senders private key
-Future<void> localStoreMessage(EncryptedMessage message) async {
-
-  bool seen;
-  if (message.sender == (await getCurrentUser()).username) {
-    seen = true;
-  } else {
-    seen = false;
-  }
+Future<void> localStoreMessage(EncryptedMessage message, bool seen) async {
 
   await db.then((value) => value.transaction((txn) async {
         await txn.rawInsert(
