@@ -1,5 +1,6 @@
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:rsa_test/backend/encrypted_message.dart';
+import 'package:rsa_test/backend/secure_storage.dart';
 import 'package:rsa_test/backend/user.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -9,7 +10,7 @@ Future<void> createTables() async {
   await db.then((value) => value.execute(
       'CREATE TABLE IF NOT EXISTS contacts (username VARCHAR(32) PRIMARY KEY, public_modulus TEXT, public_exponent TEXT)'));
   await db.then((value) => value.execute(
-      'CREATE TABLE IF NOT EXISTS messages (sender TEXT, receiver TEXT, message TEXT, signature TEXT, timestamp INTEGER)'));
+      'CREATE TABLE IF NOT EXISTS messages (sender TEXT, receiver TEXT, message TEXT, signature TEXT, timestamp INTEGER, seen BIT DEFAULT 0)'));
 }
 
 Future<void> addContact(User user) async {
@@ -43,15 +44,24 @@ Future<User> getUser(String username) async {
 //Otherwise the messages cannot be decrypted
 //Sign the messages with the senders private key
 Future<void> localStoreMessage(EncryptedMessage message) async {
+
+  bool seen;
+  if (message.sender == (await getCurrentUser()).username) {
+    seen = true;
+  } else {
+    seen = false;
+  }
+
   await db.then((value) => value.transaction((txn) async {
         await txn.rawInsert(
-            'INSERT INTO messages(sender, receiver, message, signature, timestamp) VALUES(?, ?, ?, ?, ?)',
+            'INSERT INTO messages(sender, receiver, message, signature, timestamp, seen) VALUES(?, ?, ?, ?, ?, ?)',
             [
               message.sender,
               message.receiver,
               message.encryptedMessage,
               message.signature,
-              message.timestamp.millisecondsSinceEpoch
+              message.timestamp.millisecondsSinceEpoch,
+              seen
             ]);
       }));
 }
@@ -70,4 +80,25 @@ Future<List<EncryptedMessage>> localGetMessages(
           message['signature'],
           DateTime.fromMillisecondsSinceEpoch(message['timestamp'])))
       .toList();
+}
+
+Future<List<EncryptedMessage>> getAllUnreadMessages() async {
+  List<Map<String, dynamic>> messages = await db.then((value) => value.rawQuery(
+      'SELECT * FROM messages WHERE seen = 0 ORDER BY timestamp DESC'));
+  return messages
+      .map((message) => EncryptedMessage(
+          message['sender'],
+          message['receiver'],
+          message['message'],
+          message['signature'],
+          DateTime.fromMillisecondsSinceEpoch(message['timestamp'])))
+      .toList();
+}
+
+Future<void> markMessagesAsRead(User current, User target) async {
+  await db.then((value) => value.transaction((txn) async {
+        await txn.rawUpdate(
+            'UPDATE messages SET seen = 1 WHERE sender = ? AND receiver = ?',
+            [target.username, current.username]);
+      }));
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rsa_test/backend/storage.dart';
 
 import '../backend/user.dart';
+import '../main.dart';
 
 class UserProfile extends StatelessWidget {
   final String profilePicUrl;
@@ -57,7 +58,10 @@ class UserProfile extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   addContact(user);
-                  Navigator.pop(context);
+                  Navigator.pop(context); //Show contact
+                  Navigator.pop(context); //Qr Options Menu
+                  Navigator.pop(context); //ChatRooms
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatRoomsPage()));
                 },
                 child: const Text('Add to Contacts'),
               ),

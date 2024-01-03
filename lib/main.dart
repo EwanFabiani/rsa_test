@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:rsa_test/backend/secure_storage.dart';
 import 'package:rsa_test/frontend/qr.dart';
 import 'backend/account_manager.dart';
+import 'backend/chat.dart';
 import 'backend/message.dart';
 import 'backend/rsa_keygen.dart';
 import 'backend/chats_manager.dart';
 import 'backend/user.dart';
-import 'frontend/qr.dart';
 
 
 Future<void> main() async {
@@ -15,12 +15,16 @@ Future<void> main() async {
 
   print("isSetup: $isSetup");
 
+  if (isSetup) {
+
+  }
+
   runApp(MyApp(isSetup));
 
 }
 
 class MyApp extends StatelessWidget {
-  MyApp(this.isSetup, {super.key});
+  const MyApp(this.isSetup, {super.key});
 
   final bool isSetup;
 
@@ -31,7 +35,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: isSetup? const ChatRoomsPage() : const StartScreen(),
+      home: isSetup? ChatRoomsPage() : const StartScreen(),
     );
   }
 }
@@ -73,9 +77,10 @@ class StartScreenState extends State<StartScreen> {
               onPressed: () {
                 // Use the controller's value here
                 createAccount(usernameController.text);
+                Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ChatRoomsPage()),
+                  MaterialPageRoute(builder: (context) => ChatRoomsPage()),
                 );
               },
               child: const Text('Create My Account'),
@@ -88,10 +93,12 @@ class StartScreenState extends State<StartScreen> {
   }
 }
 
+class ChatRoomsPage extends StatefulWidget {
+  @override
+  _ChatRoomsPageState createState() => _ChatRoomsPageState();
+}
 
-
-class ChatRoomsPage extends StatelessWidget {
-  const ChatRoomsPage({Key? key}) : super(key: key);
+class _ChatRoomsPageState extends State<ChatRoomsPage> {
 
   @override
   Widget build(BuildContext context) {
@@ -103,27 +110,39 @@ class ChatRoomsPage extends StatelessWidget {
         } else if (userSnapshot.hasError) {
           return Text('Error: ${userSnapshot.error}');
         } else {
-          return FutureBuilder<List<User>>(
+          return FutureBuilder<List<Chat>>(
             future: getCurrentChats(),
             builder: (BuildContext context,
-                AsyncSnapshot<List<User>> chatsSnapshot) {
+                AsyncSnapshot<List<Chat>> chatsSnapshot) {
               if (chatsSnapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator(); // or your own loading widget
               } else if (chatsSnapshot.hasError) {
                 return Text('Error: ${chatsSnapshot.error}');
               } else {
-                final List<User> rooms = chatsSnapshot.data != null
+                List<Chat> rooms = chatsSnapshot.data != null
                     ? chatsSnapshot.data!
                     : [];
                 return Scaffold(
                   appBar: AppBar(
                     automaticallyImplyLeading: false,
                     title: const Text('Chat Rooms'),
-                    backgroundColor: Theme
-                        .of(context)
-                        .colorScheme
-                        .onSecondary,
+                    backgroundColor: Theme.of(context).colorScheme.onSecondary,
+                    actions: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 4, 16, 0), // Add your desired padding here
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 30.0,
+                          ),
+                          onPressed: () {
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
                   ),
+
                   body: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: ListView.builder(
@@ -136,34 +155,50 @@ class ChatRoomsPage extends StatelessWidget {
                           ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .secondary,
+                              backgroundColor: Theme.of(context).colorScheme.secondary,
                               child: Text(
-                                rooms[index].username[0],
-                                style: const TextStyle(color: Colors.white,
-                                    fontWeight: FontWeight.bold),
+                                rooms[index].target.username[0],
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                               ),
                             ),
                             title: Text(
-                              rooms[index].username == userSnapshot.data!.username
-                                  ? "${rooms[index].username} (You)"
-                                  : rooms[index].username,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18),
+                              rooms[index].target.username == userSnapshot.data!.username
+                                  ? "${rooms[index].target.username} (You)"
+                                  : rooms[index].target.username,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                             ),
+                            trailing: rooms[index].getUnreadMessagesCount() > 0 ? Container(
+                              padding: const EdgeInsets.all(1),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 24,
+                                minHeight: 24,
+                              ),
+                              child: Text(
+                                '${rooms[index].getUnreadMessagesCount()}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ) : null,
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) =>
-                                    ChatPage(user: rooms[index])),
+                                MaterialPageRoute(builder: (context) => ChatPage(user: rooms[index].target)),
                               );
                             },
                           ),
                         );
                       },
                     ),
+
+
+
                   ),
                   floatingActionButton: SizedBox(
                     width: 60.0, // Set the width of the button
@@ -186,9 +221,8 @@ class ChatRoomsPage extends StatelessWidget {
                         size: 35.0, // Increase the icon size here
                       ),
                     ),
+
                   ),
-
-
                 );
               }
             },
@@ -198,7 +232,6 @@ class ChatRoomsPage extends StatelessWidget {
     );
   }
 }
-
 
 
 class ChatPage extends StatefulWidget {
@@ -214,6 +247,12 @@ class ChatPageState extends State<ChatPage> {
   final _textController = TextEditingController();
 
   Future<void> _handleSubmitted(String text) async {
+
+    //Prevents sending empty messages
+    if (text.isEmpty) {
+      return;
+    }
+
     _textController.clear();
 
     User current = await getCurrentUser();
